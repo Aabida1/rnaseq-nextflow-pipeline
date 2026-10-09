@@ -1,0 +1,2 @@
+chr1	fixture	exon	1	30	.	+	.	gene_id "ENSG000001"; transcript_id "ENST000001";
+chr1	fixture	exon	31	60	.	-	.	gene_id "ENSG000002"; transcript_id "ENST000002";
