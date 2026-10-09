@@ -86,7 +86,7 @@ process FEATURECOUNTS {
     """
   stub:
     """
-    printf 'Geneid\\tChr\\tStart\\tEnd\\tStrand\\tLength\\t%s\\n' "\\$(echo $bams | sed 's/ /\\t/g')" > counts.txt
+    printf 'Geneid\\tChr\\tStart\\tEnd\\tStrand\\tLength\\tP01_N.Aligned.sortedByCoord.out.bam\\tP01_T.Aligned.sortedByCoord.out.bam\\tP02_N.Aligned.sortedByCoord.out.bam\\tP02_T.Aligned.sortedByCoord.out.bam\\n' > counts.txt
     printf 'ENSG000001\\tchr1\\t1\\t100\\t+\\t100\\t10\\t12\\t8\\t14\\n' >> counts.txt
     """
 }
