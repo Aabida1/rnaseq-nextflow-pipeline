@@ -4,7 +4,7 @@ args <- commandArgs(trailingOnly = TRUE)
 outdir <- "results"
 if (length(args) >= 2 && args[[1]] == "--outdir") outdir <- args[[2]]
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
-suppressPackageStartupMessages({ library(DESeq2); library(ggplot2); library(clusterProfiler); library(org.Hs.eg.db); library(AnnotationDbi) })
+suppressPackageStartupMessages({ library(DESeq2); library(ggplot2); library(org.Hs.eg.db); library(AnnotationDbi) })\nhas_clusterprofiler <- requireNamespace("clusterProfiler", quietly = TRUE)
 url <- "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE196006&format=file&file=GSE196006_raw_counts.csv.gz"
 dest <- file.path(outdir, "GSE196006_raw_counts.csv.gz")
 if (!file.exists(dest) || file.info(dest)$size < 1000) download.file(url, destfile = dest, mode = "wb", quiet = FALSE)
@@ -53,7 +53,7 @@ ggsave(file.path(outdir, "volcano.png"), p, width = 7, height = 5, dpi = 160)
 png(file.path(outdir, "ma_plot.png"), width = 1200, height = 900, res = 150); plotMA(res, ylim = c(-5, 5)); dev.off()
 sig <- sub("\\.[0-9]+$", "", res_df$gene_id[!is.na(res_df$padj) & res_df$padj < 0.05])
 go_result <- data.frame()
-if (length(sig) > 0 && all(grepl("^ENSG[0-9]+$", sig))) {
+if (has_clusterprofiler && length(sig) > 0 && all(grepl("^ENSG[0-9]+$", sig))) {
   mapped <- AnnotationDbi::mapIds(org.Hs.eg.db, keys = unique(sig), keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first")
   mapped <- unique(na.omit(unname(mapped)))
   if (length(mapped) > 0) {
