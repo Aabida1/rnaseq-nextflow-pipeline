@@ -4,7 +4,8 @@ args <- commandArgs(trailingOnly = TRUE)
 outdir <- "results"
 if (length(args) >= 2 && args[[1]] == "--outdir") outdir <- args[[2]]
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
-suppressPackageStartupMessages({ library(DESeq2); library(ggplot2); library(org.Hs.eg.db); library(AnnotationDbi) })\nhas_clusterprofiler <- requireNamespace("clusterProfiler", quietly = TRUE)
+suppressPackageStartupMessages({ library(DESeq2); library(ggplot2); library(org.Hs.eg.db); library(AnnotationDbi) })
+has_clusterprofiler <- requireNamespace("clusterProfiler", quietly = TRUE)
 url <- "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE196006&format=file&file=GSE196006_raw_counts.csv.gz"
 dest <- file.path(outdir, "GSE196006_raw_counts.csv.gz")
 if (!file.exists(dest) || file.info(dest)$size < 1000) download.file(url, destfile = dest, mode = "wb", quiet = FALSE)
