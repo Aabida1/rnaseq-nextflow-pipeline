@@ -1,8 +1,8 @@
 nextflow.enable.dsl=2
 
-process FASTQC {
+process RAW_FASTQC {
   tag "$sample"
-  publishDir "${params.outdir}/qc", mode: 'copy'
+  publishDir "${params.outdir}/qc/raw_fastqc", mode: 'copy'
   input:
     tuple val(sample), path(read1), path(read2)
   output:
@@ -34,6 +34,24 @@ process FASTP {
   stub:
     """
     touch ${sample}_1.trimmed.fastq.gz ${sample}_2.trimmed.fastq.gz ${sample}_fastp.html ${sample}_fastp.json
+    """
+}
+
+process TRIMMED_FASTQC {
+  tag "$sample"
+  publishDir "${params.outdir}/qc/trimmed_fastqc", mode: 'copy'
+  input:
+    tuple val(sample), val(patient), val(condition), path(read1), path(read2), path(fastp_html), path(fastp_json)
+  output:
+    path("*_fastqc.html"), emit: html
+    path("*_fastqc.zip"), emit: zip
+  script:
+    """
+    fastqc --threads 2 --outdir . $read1 $read2
+    """
+  stub:
+    """
+    touch ${sample}_1.trimmed_fastq_fastqc.html ${sample}_2.trimmed_fastq_fastqc.html ${sample}_1.trimmed_fastq_fastqc.zip ${sample}_2.trimmed_fastq_fastqc.zip
     """
 }
 
@@ -134,16 +152,19 @@ workflow {
   raw = Channel.fromPath(params.input).splitCsv(header: true).map { row ->
     tuple(row.sample.toString(), file(row.fastq_1), file(row.fastq_2))
   }
-  FASTQC(raw)
+  RAW_FASTQC(raw)
   FASTP(samples)
+  TRIMMED_FASTQC(FASTP.out.trimmed)
   STAR_INDEX(file(params.fasta), file(params.gtf))
   align_inputs = FASTP.out.trimmed.map { sample, patient, condition, r1, r2, html, json -> tuple(sample, patient, condition, r1, r2) }.combine(STAR_INDEX.out.index)
   STAR_ALIGN(align_inputs)
   bams = STAR_ALIGN.out.aligned.map { sample, patient, condition, bam, log -> bam }.collect()
   FEATURECOUNTS(bams, file(params.gtf))
-  reports = FASTQC.out.html.mix(FASTQC.out.zip)
+  reports = RAW_FASTQC.out.html.mix(RAW_FASTQC.out.zip)
     .mix(FASTP.out.trimmed.map { sample, patient, condition, r1, r2, html, json -> html })
     .mix(FASTP.out.trimmed.map { sample, patient, condition, r1, r2, html, json -> json })
+    .mix(TRIMMED_FASTQC.out.html)
+    .mix(TRIMMED_FASTQC.out.zip)
     .collect()
   MULTIQC(reports)
   DESEQ2(FEATURECOUNTS.out.counts, file(params.input), file("$projectDir/scripts/run_deseq2.R"), params.control_condition)
