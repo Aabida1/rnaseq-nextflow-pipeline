@@ -1,0 +1,5 @@
+sample,patient,condition,fastq_1,fastq_2
+P01_N,P01,normal,tests/fixtures/read1.fastq,tests/fixtures/read2.fastq
+P01_T,P01,tumour,tests/fixtures/read1.fastq,tests/fixtures/read2.fastq
+P02_N,P02,normal,tests/fixtures/read1.fastq,tests/fixtures/read2.fastq
+P02_T,P02,tumour,tests/fixtures/read1.fastq,tests/fixtures/read2.fastq
