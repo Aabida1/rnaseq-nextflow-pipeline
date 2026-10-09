@@ -22,15 +22,15 @@ counts <- round(counts[!grepl("^__", rownames(counts)), , drop = FALSE])
 samples <- colnames(counts)
 # GEO's series count matrix uses sample titles such as 15.018_Normal and
 # 15.018_Tumor, rather than the original per-sample HTSeq filenames.
-sample_match <- regexec("^X?([0-9]+\\.[0-9]+)_(Normal|Tumor)$", samples, ignore.case = TRUE)
+sample_match <- regexec("^X?([0-9]+\\.[0-9]+)_[A-Za-z]([07])_G821_htseq\\.out$", samples, ignore.case = TRUE)
 sample_parts <- regmatches(samples, sample_match)
 if (any(lengths(sample_parts) != 3L)) {
   writeLines(samples, file.path(outdir, "unparsed_sample_columns.txt"))
   stop("Could not parse patient/condition labels from GEO matrix column names; see unparsed_sample_columns.txt.")
 }
 patient <- vapply(sample_parts, `[[`, character(1), 2)
-condition_label <- tolower(vapply(sample_parts, `[[`, character(1), 3))
-condition <- ifelse(condition_label == "normal", "normal", "tumour")
+condition_digit <- vapply(sample_parts, `[[`, character(1), 3)
+condition <- ifelse(condition_digit == "0", "normal", "tumour")
 metadata <- data.frame(sample = samples, patient = patient, condition = factor(condition, levels = c("normal", "tumour")))
 if (nrow(metadata) != 42 || length(unique(metadata$patient)) != 21) stop("Expected 42 samples from 21 patients.")
 pair_table <- table(metadata$patient, metadata$condition)
