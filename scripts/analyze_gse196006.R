@@ -21,8 +21,11 @@ if (any(!is.finite(counts)) || any(counts < 0) || any(counts != floor(counts))) 
 counts <- round(counts[!grepl("^__", rownames(counts)), , drop = FALSE])
 samples <- colnames(counts)
 patient <- sub("^X?([0-9]+\\.[0-9]+)_.*$", "\\1", samples)
-condition_digit <- sub("^.*_([07])_G821_htseq\\.out$", "\\1", samples)
-if (any(patient == samples) || any(!condition_digit %in% c("0", "7"))) stop("Could not parse patient/condition labels from GEO matrix column names.")
+condition_digit <- sub("^.*_[A-Za-z]?([07])_G821_htseq\\.out$", "\\1", samples)
+if (any(patient == samples) || any(!condition_digit %in% c("0", "7"))) {
+  writeLines(samples, file.path(outdir, "unparsed_sample_columns.txt"))
+  stop("Could not parse patient/condition labels from GEO matrix column names; see unparsed_sample_columns.txt.")
+}
 condition <- ifelse(condition_digit == "0", "normal", "tumour")
 metadata <- data.frame(sample = samples, patient = patient, condition = factor(condition, levels = c("normal", "tumour")))
 if (nrow(metadata) != 42 || length(unique(metadata$patient)) != 21) stop("Expected 42 samples from 21 patients.")
