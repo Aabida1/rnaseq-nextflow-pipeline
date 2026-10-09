@@ -6,7 +6,7 @@ import re
 import urllib.request
 
 URL = "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE196006&format=file&file=GSE196006_raw_counts.csv.gz"
-PATTERN = re.compile(r"^X?([0-9]+\.[0-9]+)_(Normal|Tumor)$", re.IGNORECASE)
+PATTERN = re.compile(r"^X?([0-9]+\.[0-9]+)_[A-Za-z]([07])_G821_htseq\.out$", re.IGNORECASE)
 
 
 def main():
@@ -24,8 +24,8 @@ def main():
         if not match:
             bad.append(sample)
             continue
-        patient, label = match.groups()
-        condition = "normal" if label.lower() == "normal" else "tumour"
+        patient, condition_digit = match.groups()
+        condition = "normal" if condition_digit == "0" else "tumour"
         pairs.setdefault(patient, []).append(condition)
     if bad:
         raise SystemExit("Unparsed GEO sample columns: " + ", ".join(bad))
@@ -38,7 +38,7 @@ def main():
     print("PASS: parsed 42 GEO sample columns into 21 matched normal/tumour pairs.")
     for sample in samples:
         match = PATTERN.fullmatch(sample)
-        print(f"{sample}\t{match.group(1)}\t{match.group(2).lower()}")
+        print(f"{sample}\t{match.group(1)}\t{match.group(2)}")
 
 
 if __name__ == "__main__":
