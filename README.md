@@ -18,7 +18,13 @@ Requires Nextflow 23.10+, Docker, compatible FASTA/GTF and paired-end FASTQs. Th
 nextflow run main.nf -profile docker --input samplesheet.csv --fasta reference/GRCh38.fa --gtf reference/GRCh38.gtf --outdir results --control_condition normal
 ```
 
-Confirm SRA read layout before using GSE196006 raw reads; the GEO count-matrix analysis does not assume read layout.
+### FASTQ quality-control stages
+1. **Raw-read QC:** FastQC runs on both original FASTQ files before trimming. Reports are published under `results/qc/raw_fastqc/`.
+2. **Read trimming and filtering:** fastp removes adapters and applies its default quality/length filters; its HTML and JSON reports are saved under `results/trimmed/`.
+3. **Post-trimming QC:** FastQC runs on the trimmed FASTQs. Reports are published under `results/qc/trimmed_fastqc/`.
+4. **Combined report:** MultiQC aggregates raw FastQC, fastp and post-trimming FastQC reports into `results/multiqc/multiqc_report.html`.
+
+Review the MultiQC report before interpreting downstream alignment and counts. QC reports are diagnostic; the pipeline does not automatically discard samples based on a single metric. Confirm SRA read layout before using GSE196006 raw reads; the GEO count-matrix analysis does not assume read layout.
 
 ## Tools
 FastQC, fastp, STAR, featureCounts, MultiQC, Nextflow DSL2, Docker, DESeq2, clusterProfiler, Python validation and GitHub Actions.
