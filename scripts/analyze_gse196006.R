@@ -48,11 +48,69 @@ res_df <- res_df[order(res_df$padj, na.last = TRUE), ]
 write.table(res_df, file.path(outdir, "differential_expression.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 norm <- counts(dds, normalized = TRUE)
 write.table(data.frame(gene_id = rownames(norm), norm, check.names = FALSE), file.path(outdir, "normalized_counts.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+
+# Sample-level QC: library size and number of detected genes.
+qc <- data.frame(
+  sample = colnames(counts),
+  patient = metadata[colnames(counts), "patient"],
+  condition = metadata[colnames(counts), "condition"],
+  raw_library_size = colSums(counts),
+  detected_genes = colSums(counts > 0),
+  normalized_library_size = colSums(norm),
+  stringsAsFactors = FALSE
+)
+qc$matched_pair_correlation <- NA_real_
+for (id in unique(qc$patient)) {
+  pair_samples <- qc$sample[qc$patient == id]
+  if (length(pair_samples) == 2L) {
+    pair_cor <- suppressWarnings(cor(
+      assay(vst(dds[, pair_samples], blind = TRUE)),
+      method = "pearson"
+    )[1, 2])
+    qc$matched_pair_correlation[qc$sample %in% pair_samples] <- pair_cor
+  }
+}
+write.table(qc, file.path(outdir, "sample_qc_metrics.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+
 vsd <- vst(dds, blind = FALSE)
+vst_mat <- assay(vsd)
+sample_cor <- cor(vst_mat, method = "pearson", use = "pairwise.complete.obs")
+write.table(data.frame(sample = rownames(sample_cor), sample_cor, check.names = FALSE),
+            file.path(outdir, "sample_correlation_matrix.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+cor_long <- as.data.frame(as.table(sample_cor), stringsAsFactors = FALSE)
+names(cor_long) <- c("sample_x", "sample_y", "correlation")
+cor_long$sample_x <- factor(cor_long$sample_x, levels = colnames(sample_cor))
+cor_long$sample_y <- factor(cor_long$sample_y, levels = rev(colnames(sample_cor)))
+p_cor <- ggplot(cor_long, aes(sample_x, sample_y, fill = correlation)) +
+  geom_tile() + scale_fill_gradient2(limits = c(-1, 1), midpoint = 0) +
+  theme_minimal(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 5),
+        axis.title = element_blank(), panel.grid = element_blank()) +
+  labs(fill = "Pearson r", title = "Sample correlation (VST counts)")
+ggsave(file.path(outdir, "sample_correlation_heatmap.png"), p_cor,
+       width = 12, height = 11, dpi = 180)
+
 pca <- plotPCA(vsd, intgroup = "condition", returnData = TRUE)
 pv <- round(100 * attr(pca, "percentVar"))
-p <- ggplot(pca, aes(PC1, PC2, color = condition)) + geom_point(size = 3) + xlab(paste0("PC1: ", pv[1], "% variance")) + ylab(paste0("PC2: ", pv[2], "% variance")) + theme_bw()
-ggsave(file.path(outdir, "pca.png"), p, width = 7, height = 5, dpi = 160)
+pca$sample <- if ("name" %in% names(pca)) as.character(pca$name) else rownames(pca)
+p <- ggplot(pca, aes(PC1, PC2, color = condition, label = sample)) +
+  geom_point(size = 3) + geom_text(check_overlap = TRUE, nudge_y = 1.2, size = 2.4, show.legend = FALSE) +
+  xlab(paste0("PC1: ", pv[1], "% variance")) + ylab(paste0("PC2: ", pv[2], "% variance")) +
+  theme_bw() + labs(title = "PCA of variance-stabilized counts (sample labels)")
+ggsave(file.path(outdir, "pca.png"), p, width = 10, height = 7, dpi = 180)
+
+pair_ids <- unique(metadata$patient)
+pair_qc <- do.call(rbind, lapply(pair_ids, function(id) {
+  pair_samples <- rownames(metadata)[metadata$patient == id]
+  if (length(pair_samples) != 2L) return(NULL)
+  data.frame(patient = id,
+             normal_sample = pair_samples[metadata[pair_samples, "condition"] == "normal"],
+             tumour_sample = pair_samples[metadata[pair_samples, "condition"] == "tumour"],
+             vst_pearson_correlation = unname(cor(vst_mat[, pair_samples[1]], vst_mat[, pair_samples[2]], method = "pearson")),
+             stringsAsFactors = FALSE)
+}))
+write.table(pair_qc, file.path(outdir, "matched_pair_correlations.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 plot_df <- res_df
 plot_df$neglog10padj <- -log10(pmax(plot_df$padj, 1e-300))
 plot_df$significance <- ifelse(!is.na(plot_df$padj) & plot_df$padj < 0.05 & abs(plot_df$log2FoldChange) >= 1, "FDR < 0.05 and |log2FC| >= 1", "Other")
