@@ -4,7 +4,9 @@ args <- commandArgs(trailingOnly = TRUE)
 outdir <- "results"
 if (length(args) >= 2 && args[[1]] == "--outdir") outdir <- args[[2]]
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
-suppressPackageStartupMessages({ library(DESeq2); library(ggplot2); library(org.Hs.eg.db); library(AnnotationDbi) })
+suppressPackageStartupMessages({ library(DESeq2); library(ggplot2) })
+has_annotation <- requireNamespace("org.Hs.eg.db", quietly = TRUE) &&
+                  requireNamespace("AnnotationDbi", quietly = TRUE)
 has_clusterprofiler <- requireNamespace("clusterProfiler", quietly = TRUE)
 url <- "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE196006&format=file&file=GSE196006_raw_counts.csv.gz"
 dest <- file.path(outdir, "GSE196006_raw_counts.csv.gz")
@@ -20,8 +22,6 @@ storage.mode(counts) <- "numeric"
 if (any(!is.finite(counts)) || any(counts < 0) || any(counts != floor(counts))) stop("Count matrix contains invalid/non-integer values.")
 counts <- round(counts[!grepl("^__", rownames(counts)), , drop = FALSE])
 samples <- colnames(counts)
-# GEO's series count matrix uses sample titles such as 15.018_Normal and
-# 15.018_Tumor, rather than the original per-sample HTSeq filenames.
 sample_match <- regexec("^X?([0-9]+\\.[0-9]+)_[A-Za-z]([07])_G821_htseq\\.out$", samples, ignore.case = TRUE)
 sample_parts <- regmatches(samples, sample_match)
 if (any(lengths(sample_parts) != 3L)) {
@@ -61,11 +61,11 @@ ggsave(file.path(outdir, "volcano.png"), p, width = 7, height = 5, dpi = 160)
 png(file.path(outdir, "ma_plot.png"), width = 1200, height = 900, res = 150); plotMA(res, ylim = c(-5, 5)); dev.off()
 sig <- sub("\\.[0-9]+$", "", res_df$gene_id[!is.na(res_df$padj) & res_df$padj < 0.05])
 go_result <- data.frame()
-if (has_clusterprofiler && length(sig) > 0 && all(grepl("^ENSG[0-9]+$", sig))) {
+if (has_clusterprofiler && has_annotation && length(sig) > 0 && all(grepl("^ENSG[0-9]+$", sig))) {
   mapped <- AnnotationDbi::mapIds(org.Hs.eg.db, keys = unique(sig), keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first")
   mapped <- unique(na.omit(unname(mapped)))
   if (length(mapped) > 0) {
-    ego <- tryCatch(enrichGO(gene = mapped, OrgDb = org.Hs.eg.db, keyType = "ENTREZID", ont = "BP", pAdjustMethod = "BH", readable = TRUE), error = function(e) NULL)
+    ego <- tryCatch(clusterProfiler::enrichGO(gene = mapped, OrgDb = org.Hs.eg.db, keyType = "ENTREZID", ont = "BP", pAdjustMethod = "BH", readable = TRUE), error = function(e) NULL)
     if (!is.null(ego)) go_result <- as.data.frame(ego)
   }
 }
