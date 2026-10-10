@@ -62,12 +62,26 @@ png(file.path(outdir, "ma_plot.png"), width = 1200, height = 900, res = 150); pl
 sig <- sub("\\.[0-9]+$", "", res_df$gene_id[!is.na(res_df$padj) & res_df$padj < 0.05])
 go_result <- data.frame()
 if (has_clusterprofiler && has_annotation && length(sig) > 0 && all(grepl("^ENSG[0-9]+$", sig))) {
-  mapped <- AnnotationDbi::mapIds(org.Hs.eg.db, keys = unique(sig), keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first")
-  mapped <- unique(na.omit(unname(mapped)))
-  if (length(mapped) > 0) {
-    ego <- tryCatch(clusterProfiler::enrichGO(gene = mapped, OrgDb = org.Hs.eg.db, keyType = "ENTREZID", ont = "BP", pAdjustMethod = "BH", readable = TRUE), error = function(e) NULL)
-    if (!is.null(ego)) go_result <- as.data.frame(ego)
-  }
+  # Attach the annotation package so its OrgDb object is available by name.
+  suppressPackageStartupMessages({
+    library(org.Hs.eg.db)
+    library(AnnotationDbi)
+  })
+  go_result <- tryCatch({
+    mapped <- AnnotationDbi::mapIds(org.Hs.eg.db, keys = unique(sig), keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first")
+    mapped <- unique(na.omit(unname(mapped)))
+    if (length(mapped) > 0) {
+      ego <- clusterProfiler::enrichGO(gene = mapped, OrgDb = org.Hs.eg.db, keyType = "ENTREZID", ont = "BP", pAdjustMethod = "BH", readable = TRUE)
+      as.data.frame(ego)
+    } else {
+      data.frame()
+    }
+  }, error = function(e) {
+    message("Optional GO enrichment skipped: ", conditionMessage(e))
+    data.frame()
+  })
+} else {
+  message("Optional GO enrichment skipped because its packages or eligible gene IDs are unavailable.")
 }
 write.table(go_result, file.path(outdir, "go_bp_enrichment.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 writeLines(c("Dataset: NCBI GEO GSE196006", "Contrast: tumour versus matched adjacent normal", "Model: ~ patient + condition", "FDR threshold: 0.05", "GO enrichment uses human Ensembl IDs; empty results can mean no significant genes or unmapped IDs.", "Adjacent normal tissue may show field effects."), file.path(outdir, "analysis_notes.txt"))
