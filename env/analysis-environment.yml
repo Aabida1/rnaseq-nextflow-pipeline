@@ -1,0 +1,11 @@
+name: rnaseq-analysis
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.3
+  - r-ggplot2
+  - bioconductor-deseq2
+  - bioconductor-annotationdbi
+  - bioconductor-org.hs.eg.db
+  - bioconductor-clusterprofiler
