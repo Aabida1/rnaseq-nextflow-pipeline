@@ -100,7 +100,7 @@ process FEATURECOUNTS {
     path("counts.txt"), emit: counts
   script:
     """
-    featureCounts -T 4 -a $gtf -o counts.txt -p -B -C $bams
+    featureCounts -T 4 -a $gtf -o counts.txt -p --countReadPairs -B -C $bams
     """
   stub:
     """
