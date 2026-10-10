@@ -49,6 +49,9 @@ write.table(res_df, file.path(outdir, "differential_expression.tsv"), sep = "\t"
 norm <- counts(dds, normalized = TRUE)
 write.table(data.frame(gene_id = rownames(norm), norm, check.names = FALSE), file.path(outdir, "normalized_counts.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 
+vsd <- vst(dds, blind = FALSE)
+vst_mat <- assay(vsd)
+
 # Sample-level QC: library size and number of detected genes.
 qc <- data.frame(
   sample = colnames(counts),
@@ -63,17 +66,12 @@ qc$matched_pair_correlation <- NA_real_
 for (id in unique(qc$patient)) {
   pair_samples <- qc$sample[qc$patient == id]
   if (length(pair_samples) == 2L) {
-    pair_cor <- suppressWarnings(cor(
-      assay(vst(dds[, pair_samples], blind = TRUE)),
-      method = "pearson"
-    )[1, 2])
+    pair_cor <- suppressWarnings(cor(vst_mat[, pair_samples[1]], vst_mat[, pair_samples[2]], method = "pearson"))
     qc$matched_pair_correlation[qc$sample %in% pair_samples] <- pair_cor
   }
 }
 write.table(qc, file.path(outdir, "sample_qc_metrics.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 
-vsd <- vst(dds, blind = FALSE)
-vst_mat <- assay(vsd)
 sample_cor <- cor(vst_mat, method = "pearson", use = "pairwise.complete.obs")
 write.table(data.frame(sample = rownames(sample_cor), sample_cor, check.names = FALSE),
             file.path(outdir, "sample_correlation_matrix.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
