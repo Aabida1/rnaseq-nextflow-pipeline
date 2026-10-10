@@ -16,7 +16,7 @@ if (length(missing_cran)) {
 }
 missing_bioc <- required_bioc[!vapply(required_bioc, requireNamespace, logical(1), quietly = TRUE)]
 if (length(missing_bioc)) {
-  BiocManager::install(missing_bioc, ask = FALSE, update = FALSE)
+  BiocManager::install(missing_bioc, dependencies = TRUE, ask = FALSE, update = FALSE)
 }
 
 required <- c(required_cran, required_bioc)
