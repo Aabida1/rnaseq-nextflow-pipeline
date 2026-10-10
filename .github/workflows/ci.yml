@@ -60,7 +60,7 @@ jobs:
         with:
           r-version: "4.3"
       - name: Install R and Bioconductor dependencies
-        run: Rscript env/install_bioc.R
+        run: Rscript scripts/install_bioc.R
       - name: Run real GEO GSE196006 analysis
         run: Rscript scripts/analyze_gse196006.R --outdir results
       - name: Upload real-data analysis outputs
