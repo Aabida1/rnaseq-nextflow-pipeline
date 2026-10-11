@@ -14,8 +14,8 @@ genome = "".join(rng.choice(alphabet) for _ in range(1_000_000))
 (out / "reference.fa").write_text(">chrSmoke\n" + "\n".join(genome[i:i+80] for i in range(0, len(genome), 80)) + "\n")
 
 genes = []
-for i in range(20):
-    start0 = 10_000 + i * 40_000
+for i in range(40):
+    start0 = 10_000 + i * 20_000
     end0 = start0 + 5_000
     gene_id = f"ENSGSMOKE{i+1:011d}"
     genes.append((gene_id, start0, end0))
@@ -38,12 +38,10 @@ with (out / "samplesheet.csv").open("w") as sheet:
             read_number = 0
             for gi, (gene_id, start0, end0) in enumerate(genes):
                 base = 24 + (gi * 13) % 37
-                if condition == "tumour" and gi < 6:
-                    n_pairs = base * 2
-                elif condition == "tumour" and 6 <= gi < 12:
-                    n_pairs = max(8, base // 2)
-                else:
-                    n_pairs = base
+                condition_effect = 2.0 if condition == "tumour" and gi < 12 else (0.5 if condition == "tumour" and 12 <= gi < 24 else 1.0)
+                patient_effect = 1.15 if patient == "P02" and gi % 3 == 0 else (0.85 if patient == "P02" and gi % 3 == 1 else 1.0)
+                sample_jitter = rng.uniform(0.65, 1.35)
+                n_pairs = max(12, round(base * condition_effect * patient_effect * sample_jitter))
                 for j in range(n_pairs):
                     max_start = end0 - start0 - 225
                     offset = rng.randrange(0, max_start)
