@@ -55,14 +55,26 @@ jobs:
           docker run --rm rnaseq-pipeline:1.0.0 multiqc --version
           docker run --rm rnaseq-pipeline:1.0.0 Rscript -e 'stopifnot(requireNamespace("DESeq2", quietly=TRUE)); cat("DESeq2 available\\n")'
 
-      - name: Run the real Nextflow pipeline with real tools (not stub mode)
+      - name: Build a prebuilt STAR index for testing the --star_index path
+        run: |
+          mkdir -p smoke-data/prebuilt-star-index
+          docker run --rm \
+            -v "$PWD/smoke-data:/data" \
+            rnaseq-pipeline:1.0.0 \
+            STAR --runMode genomeGenerate --runThreadN 2 \
+              --genomeDir /data/prebuilt-star-index \
+              --genomeFastaFiles /data/reference.fa \
+              --sjdbGTFfile /data/genes.gtf \
+              --sjdbOverhang 100 --genomeSAindexNbases 5 --genomeChrBinNbits 8
+
+      - name: Run the real Nextflow pipeline with real tools and a prebuilt index
         env:
           NXF_ANSI_LOG: "false"
         run: |
           mkdir -p smoke-results
           nextflow run main.nf -profile docker \
             --input smoke-data/samplesheet.csv \
-            --fasta smoke-data/reference.fa \
+            --star_index smoke-data/prebuilt-star-index \
             --gtf smoke-data/genes.gtf \
             --outdir smoke-results \
             --control_condition normal \
