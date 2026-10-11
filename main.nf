@@ -149,7 +149,8 @@ process DESEQ2 {
 }
 
 workflow {
-  if (!params.input || !params.fasta || !params.gtf) error "Provide --input, --fasta, and --gtf."
+  if (!params.input) error "Provide --input."
+  if (!params.star_index && (!params.fasta || !params.gtf)) error "Provide either --star_index (a prebuilt STAR index directory) or both --fasta and --gtf."
   samples = Channel.fromPath(params.input).splitCsv(header: true).map { row ->
     tuple(row.sample.toString(), row.patient.toString(), row.condition.toString(), file(row.fastq_1), file(row.fastq_2))
   }
@@ -159,8 +160,13 @@ workflow {
   RAW_FASTQC(raw)
   FASTP(samples)
   TRIMMED_FASTQC(FASTP.out.trimmed)
-  STAR_INDEX(file(params.fasta), file(params.gtf))
-  align_inputs = FASTP.out.trimmed.map { sample, patient, condition, r1, r2, html, json -> tuple(sample, patient, condition, r1, r2) }.combine(STAR_INDEX.out.index)
+  if (params.star_index) {
+    index_ch = Channel.value(file(params.star_index))
+  } else {
+    STAR_INDEX(file(params.fasta), file(params.gtf))
+    index_ch = STAR_INDEX.out.index
+  }
+  align_inputs = FASTP.out.trimmed.map { sample, patient, condition, r1, r2, html, json -> tuple(sample, patient, condition, r1, r2) }.combine(index_ch)
   STAR_ALIGN(align_inputs)
   bams = STAR_ALIGN.out.aligned.map { sample, patient, condition, bam, log -> bam }.collect()
   FEATURECOUNTS(bams, file(params.gtf))
