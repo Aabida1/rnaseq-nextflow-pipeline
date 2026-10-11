@@ -55,6 +55,7 @@ jobs:
         env:
           NXF_ANSI_LOG: "false"
         run: |
+          mkdir -p smoke-results
           nextflow run main.nf -profile docker \
             --input smoke-data/samplesheet.csv \
             --fasta smoke-data/reference.fa \
@@ -70,7 +71,7 @@ jobs:
           test -s smoke-results/deseq2/deseq2_results/differential_expression.tsv
           test -s smoke-results/multiqc/multiqc_report.html
           test -s smoke-results/qc/raw_fastqc/P01_N_R1_fastqc.html
-          test -s smoke-results/qc/trimmed_fastqc/P01_N_1.trimmed_fastq_fastqc.html
+          test -s smoke-results/qc/trimmed_fastqc/P01_N_1.trimmed_fastqc.html
           echo "Docker build and real-tool paired-end smoke test passed."
 
       - name: Preserve smoke-test outputs and logs
