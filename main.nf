@@ -150,7 +150,8 @@ process DESEQ2 {
 
 workflow {
   if (!params.input) error "Provide --input."
-  if (!params.star_index && (!params.fasta || !params.gtf)) error "Provide either --star_index (a prebuilt STAR index directory) or both --fasta and --gtf."
+  if (!params.gtf) error "Provide --gtf for featureCounts."
+  if (!params.star_index && !params.fasta) error "Provide --fasta to build a STAR index, or provide a prebuilt index with --star_index."
   samples = Channel.fromPath(params.input).splitCsv(header: true).map { row ->
     tuple(row.sample.toString(), row.patient.toString(), row.condition.toString(), file(row.fastq_1), file(row.fastq_2))
   }
