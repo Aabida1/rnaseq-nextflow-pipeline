@@ -1,0 +1,85 @@
+name: Raw-read integration test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker-and-real-tools-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java for Nextflow
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Nextflow
+        run: |
+          curl -s https://get.nextflow.io | bash
+          sudo mv nextflow /usr/local/bin/
+          nextflow -version
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate deterministic paired-end smoke-test data
+        run: |
+          python scripts/create_smoke_data.py smoke-data
+          python scripts/validate_samplesheet.py smoke-data/samplesheet.csv
+
+      - name: Build the actual Docker image
+        run: docker build --progress=plain -t rnaseq-pipeline:1.0.0 .
+
+      - name: Verify required tools inside the built image
+        run: |
+          docker run --rm rnaseq-pipeline:1.0.0 fastqc --version
+          docker run --rm rnaseq-pipeline:1.0.0 fastp --version
+          docker run --rm rnaseq-pipeline:1.0.0 STAR --version
+          docker run --rm rnaseq-pipeline:1.0.0 featureCounts -v
+          docker run --rm rnaseq-pipeline:1.0.0 multiqc --version
+          docker run --rm rnaseq-pipeline:1.0.0 Rscript -e 'stopifnot(requireNamespace("DESeq2", quietly=TRUE)); cat("DESeq2 available\\n")'
+
+      - name: Run the real Nextflow pipeline with real tools (not stub mode)
+        env:
+          NXF_ANSI_LOG: "false"
+        run: |
+          nextflow run main.nf -profile docker \
+            --input smoke-data/samplesheet.csv \
+            --fasta smoke-data/reference.fa \
+            --gtf smoke-data/genes.gtf \
+            --outdir smoke-results \
+            --control_condition normal \
+            -with-report smoke-results/nextflow-report.html \
+            -with-timeline smoke-results/nextflow-timeline.html
+
+      - name: Assert key outputs exist and are non-empty
+        run: |
+          test -s smoke-results/counts/counts.txt
+          test -s smoke-results/deseq2/deseq2_results/differential_expression.tsv
+          test -s smoke-results/multiqc/multiqc_report.html
+          test -s smoke-results/qc/raw_fastqc/P01_N_R1_fastqc.html
+          test -s smoke-results/qc/trimmed_fastqc/P01_N_1.trimmed_fastq_fastqc.html
+          echo "Docker build and real-tool paired-end smoke test passed."
+
+      - name: Preserve smoke-test outputs and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-read-smoke-test
+          path: |
+            smoke-results/
+            .nextflow.log
+          if-no-files-found: warn
+          retention-days: 14
