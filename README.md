@@ -12,7 +12,7 @@ Rscript scripts/analyze_gse196006.R --outdir results
 The script downloads the public raw-count matrix, checks the expected 21 matched pairs, runs paired DESeq2 (`~ patient + condition`), and generates differential-expression tables, PCA/volcano/MA plots, GO enrichment, provenance and R session information.
 
 ## Raw-read workflow
-Requires Nextflow 23.10+, Docker, compatible FASTA/GTF and paired-end FASTQs. The sample sheet columns are `sample,patient,condition,fastq_1,fastq_2`. Validate with `python scripts/validate_samplesheet.py samplesheet.csv`, build with `docker build -t rnaseq-pipeline:1.0.0 .`, then run:
+Requires Nextflow 23.10+, Docker and paired-end FASTQs. You can either provide a compatible FASTA/GTF for the workflow to build a STAR index, or provide a prebuilt STAR index directory with `--star_index`. A prebuilt index is recommended for human GRCh38 on memory-limited runners, because building the human index needs substantial RAM. The sample sheet columns are `sample,patient,condition,fastq_1,fastq_2`. Validate with `python scripts/validate_samplesheet.py samplesheet.csv`, build with `docker build -t rnaseq-pipeline:1.0.0 .`, then run:
 
 ```bash
 nextflow run main.nf -profile docker --input samplesheet.csv --fasta reference/GRCh38.fa --gtf reference/GRCh38.gtf --outdir results --control_condition normal
