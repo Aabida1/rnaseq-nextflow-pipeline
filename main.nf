@@ -68,7 +68,7 @@ process STAR_INDEX {
     MAX_CHR_LENGTH=$(awk '/^>/ {if (len>max) max=len; len=0; next} {gsub(/[[:space:]]/, ""); len+=length($0)} END {if (len>max) max=len; print max}' $fasta)
     SA_INDEX=$(python -c 'import math,sys; print(max(1,min(14,int(math.log2(int(sys.argv[1]))/2-1))))' "$GENOME_LENGTH")
     CHR_BIN=$(python -c 'import math,sys; print(max(6,min(18,int(math.log2(int(sys.argv[1])))-1)))' "$MAX_CHR_LENGTH")
-    STAR --runMode genomeGenerate --runThreadN 4 --genomeDir star_index --genomeFastaFiles $fasta --sjdbGTFfile $gtf --sjdbOverhang 74 --genomeSAindexNbases $SA_INDEX --genomeChrBinNbits $CHR_BIN
+    STAR --runMode genomeGenerate --runThreadN 4 --genomeDir star_index --genomeFastaFiles $fasta --sjdbGTFfile $gtf --sjdbOverhang 100 --genomeSAindexNbases $SA_INDEX --genomeChrBinNbits $CHR_BIN
     """
   stub:
     """
