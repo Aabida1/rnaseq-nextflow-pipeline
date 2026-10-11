@@ -1,5 +1,9 @@
 name: Raw-read integration test
 
+concurrency:
+  group: raw-read-integration-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
