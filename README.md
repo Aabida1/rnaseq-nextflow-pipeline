@@ -29,8 +29,10 @@ Review the MultiQC report before interpreting downstream alignment and counts. Q
 ## Tools
 FastQC, fastp, STAR, featureCounts, MultiQC, Nextflow DSL2, Docker, DESeq2, clusterProfiler, Python validation and GitHub Actions.
 
-## Validation
-GitHub Actions is configured for Python tests and a Nextflow stub-mode workflow check. Stub mode checks workflow wiring only; it does not validate real alignment or biological results. Do not claim the real-data analysis completed until the GEO download, R script, and CI have actually run successfully.
+## Validation status
+GitHub Actions validates the sample-sheet code, GEO sample parsing, and Nextflow workflow wiring. A Docker-backed integration workflow also builds the actual image and runs the full tool chain on a deterministic, generated paired-end smoke-test dataset: raw FastQC → fastp → trimmed FastQC → STAR → featureCounts → DESeq2 → MultiQC. It checks that the key count table, DESeq2 results, FastQC reports, and MultiQC report are created. The smoke-test artifact is attached to the [successful integration run](https://github.com/Aabida1/rnaseq-nextflow-pipeline/actions/runs/38162342971/artifacts/11710643854).
+
+The synthetic integration test validates execution and file wiring; it is **not** a biological analysis and does not mean the GSE196006 raw FASTQs have been aligned. The separate GEO analysis downloads and analyzes the public raw-count matrix with paired DESeq2, without running STAR or featureCounts. Do not describe the 42 real GSE196006 FASTQ samples as end-to-end processed until that raw-read workflow has been run against those FASTQs and a compatible human reference.
 
 Expected outputs: `sample_metadata.tsv`, `differential_expression.tsv`, `normalized_counts.tsv`, `pca.png`, `volcano.png`, `ma_plot.png`, `go_bp_enrichment.tsv`, `input_provenance.txt`, `analysis_notes.txt`, and `sessionInfo.txt`.
 
